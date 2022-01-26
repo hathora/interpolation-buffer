@@ -1,11 +1,11 @@
 //@ts-ignore
-import StatsArray from "@fadoli/node-fast-running-stats";
+import createMedianFilter from "moving-median";
 
 type BufferEntry<T> = { state: T; updatedAt: number };
 
 export class InterpolationBuffer<T> {
   private clientStartTime: number | undefined;
-  private offsetStats = new StatsArray(1000);
+  private offsetMedian = createMedianFilter(100);
   private buffer: BufferEntry<T>[] = [];
 
   constructor(
@@ -15,8 +15,8 @@ export class InterpolationBuffer<T> {
   ) {}
 
   public enqueue(state: T, updatedAt: number) {
-    this.offsetStats.append(Date.now() - updatedAt);
-    this.buffer.push({ state, updatedAt: updatedAt + this.offsetStats.getStats().mean + this.tickRate });
+    const offset = this.offsetMedian(Date.now() - updatedAt);
+    this.buffer.push({ state, updatedAt: updatedAt + offset + this.tickRate });
   }
 
   public getInterpolatedState(now: number): T {

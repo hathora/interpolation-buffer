@@ -28,7 +28,7 @@
   },
   "homepage": "https://github.com/hathora/interpolation-buffer#readme",
   "dependencies": {
-    "@fadoli/node-fast-running-stats": "^1.0.3"
+    "moving-median": "^1.0.0"
   },
   "devDependencies": {
     "typescript": "^4.5.5"
