@@ -16,7 +16,8 @@ export class InterpolationBuffer<T> {
 
   public enqueue(state: T, updatedAt: number) {
     const offset = this.offsetMedian(Date.now() - updatedAt);
-    this.buffer.push({ state, updatedAt: updatedAt + offset + this.tickRate });
+    const roundedOffset = Math.round(offset / this.tickRate) * this.tickRate;
+    this.buffer.push({ state, updatedAt: updatedAt + roundedOffset + this.tickRate });
   }
 
   public getInterpolatedState(now: number): T {
