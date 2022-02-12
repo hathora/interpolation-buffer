@@ -15,19 +15,24 @@ export class InterpolationBuffer<T> {
   ) {}
 
   public enqueue(state: T, updatedAt: number) {
-    const offset = this.offsetMedian(Date.now() - updatedAt);
+    const now = Date.now();
+    if (this.buffer.length === 0 && this.clientStartTime === undefined) {
+      this.clientStartTime = now;
+    }
+    const offset = this.offsetMedian(now - updatedAt);
     const roundedOffset = Math.ceil(offset / (this.tickRate / 2)) * (this.tickRate / 2);
     this.buffer.push({ state, updatedAt: updatedAt + roundedOffset + this.tickRate });
   }
 
   public getInterpolatedState(now: number): T {
     if (this.buffer.length === 0) {
+      this.clientStartTime = undefined;
       return this.restingState;
     }
 
     if (this.buffer[this.buffer.length - 1].updatedAt <= now) {
-      this.clientStartTime = undefined;
       this.restingState = this.buffer[this.buffer.length - 1].state;
+      this.clientStartTime = this.buffer[this.buffer.length - 1].updatedAt;
       this.buffer = [];
       return this.restingState;
     }
@@ -40,10 +45,7 @@ export class InterpolationBuffer<T> {
       }
     }
 
-    if (this.clientStartTime === undefined) {
-      this.clientStartTime = now;
-    }
-    return this.interp({ state: this.restingState, updatedAt: this.clientStartTime }, this.buffer[0], now);
+    return this.interp({ state: this.restingState, updatedAt: this.clientStartTime ?? now }, this.buffer[0], now);
   }
 
   private interp(from: BufferEntry<T>, to: BufferEntry<T>, now: number): T {
