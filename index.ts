@@ -11,8 +11,7 @@ export class InterpolationBuffer<T> {
   constructor(
     private restingState: T,
     private tickRate: number,
-    private interpolate: (from: T, to: T, pctElapsed: number) => T,
-    private onEvent: (event: string) => void
+    private interpolate: (from: T, to: T, pctElapsed: number) => T
   ) {}
 
   public enqueue(state: T, events: string[], updatedAt: number) {
@@ -25,31 +24,33 @@ export class InterpolationBuffer<T> {
     this.buffer.push({ state, events, updatedAt: updatedAt + roundedOffset + this.tickRate });
   }
 
-  public getInterpolatedState(now: number): T {
+  public getInterpolatedState(now: number): { state: T; events: string[] } {
     if (this.buffer.length === 0) {
       this.clientStartTime = undefined;
-      return this.restingState;
+      return { state: this.restingState, events: [] };
     }
 
     if (this.buffer[this.buffer.length - 1].updatedAt <= now) {
       this.restingState = this.buffer[this.buffer.length - 1].state;
       this.clientStartTime = this.buffer[this.buffer.length - 1].updatedAt;
-      this.sendEvents(0, this.buffer.length);
+      const events = this.consumeEvents(0, this.buffer.length);
       this.buffer = [];
-      return this.restingState;
+      return { state: this.restingState, events };
     }
 
     for (let i = this.buffer.length - 1; i >= 0; i--) {
       if (this.buffer[i].updatedAt <= now) {
         this.clientStartTime = undefined;
-        this.sendEvents(0, i + 2);
+        const events = this.consumeEvents(0, i + 2);
         this.buffer.splice(0, i);
-        return this.interp(this.buffer[0], this.buffer[1], now);
+        return { state: this.interp(this.buffer[0], this.buffer[1], now), events };
       }
     }
 
-    this.sendEvents(0, 1);
-    return this.interp({ state: this.restingState, updatedAt: this.clientStartTime ?? now }, this.buffer[0], now);
+    return {
+      state: this.interp({ state: this.restingState, updatedAt: this.clientStartTime ?? now }, this.buffer[0], now),
+      events: this.consumeEvents(0, 1),
+    };
   }
 
   private interp(from: Omit<BufferEntry<T>, "events">, to: BufferEntry<T>, now: number): T {
@@ -57,10 +58,12 @@ export class InterpolationBuffer<T> {
     return this.interpolate(from.state, to.state, pctElapsed);
   }
 
-  private sendEvents(startIdx: number, endIndex: number) {
+  private consumeEvents(startIdx: number, endIndex: number) {
+    const events: string[] = [];
     for (let i = startIdx; i < endIndex; i++) {
-      this.buffer[i].events.forEach(this.onEvent);
+      this.buffer[i].events.forEach((event) => events.push(event));
       this.buffer[i].events = [];
     }
+    return events;
   }
 }
