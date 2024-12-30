@@ -15,7 +15,7 @@ import { InterpolationBuffer } from "interpolation-buffer";
 const stateBuffer = new InterpolationBuffer(state, 50, lerp);
 
 // enqueue
-tateBuffer.enqueue(msg.state, [], timestamp);
+stateBuffer.enqueue(msg.state, [], timestamp);
 
 // fetch
 const { state } = this.stateBuffer.getInterpolatedState(Date.now());
